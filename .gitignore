@@ -1,0 +1,25 @@
+# Editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Python
+__pycache__/
+*.pyc
+
+# Build and export artifacts
+dist/
+build/
+out/
+*.zip
+*.tar
+*.tar.gz
+*.pdf
+*.html
+
+# Local environment
+.env
+.venv/
+venv/
