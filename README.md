@@ -45,7 +45,6 @@ The current draft now makes these points explicit:
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── README.md
-└── REPO_SETUP.md
 ```
 
 ## Quick Start
