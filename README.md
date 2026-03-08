@@ -49,18 +49,3 @@ Then review:
 
 Examples are in `examples/`.
 
-## GitHub Ready Notes
-
-This repository now includes:
-
-- a root `LICENSE`
-- a `CONTRIBUTING.md`
-- a `CHANGELOG.md`
-- a `.gitignore`
-- a `.gitattributes`
-- documentation index files
-- example index files
-- GitHub issue templates
-- a pull request template
-
-The included license is **BSD 0 Clause (0BSD)** as a reasonable default for a language specification repository. Change it if you want a different policy.
