@@ -31,22 +31,6 @@ The current draft now makes these points explicit:
 - application defines an explicit binding collision rule
 - applied bindings populate a fresh application scope and shadow outer bindings during that application
 
-## Repository Layout
-
-```text
-.
-├── .github/
-├── docs/
-├── examples/
-├── spec/
-├── .gitattributes
-├── .gitignore
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── LICENSE
-├── README.md
-```
-
 ## Quick Start
 
 Start with these files:
