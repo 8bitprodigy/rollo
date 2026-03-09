@@ -1,0 +1,6 @@
+styleRule = [
+    match: [kind: card]
+    apply: [padding: 2 color: "blue"]
+]
+
+viewer = applyStyleRule viewer styleRule

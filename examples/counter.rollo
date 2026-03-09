@@ -1,0 +1,9 @@
+state = [count: 0]
+
+increment = {
+    state = state ^ [count: state.count + 1]
+}
+
+state . {
+    show count
+}

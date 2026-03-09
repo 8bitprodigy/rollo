@@ -15,6 +15,7 @@ These files define the current Rollo draft.
 - `rollo-types.md`
 - `rollo-runtime.md`
 - `rollo-events.md`
+- `rollo-styling.md`
 
 ## Reading Order
 
@@ -28,3 +29,5 @@ A good reading order is:
 6. types
 7. runtime
 8. events
+9. styling
+10. revisit symbol

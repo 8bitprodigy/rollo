@@ -1,0 +1,3 @@
+viewer = defineCards
+viewer = applyStyles viewer
+show viewer

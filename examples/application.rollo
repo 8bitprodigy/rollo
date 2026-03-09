@@ -1,0 +1,5 @@
+person = [name:"Ada" age:32]
+
+person . {
+    show name
+}

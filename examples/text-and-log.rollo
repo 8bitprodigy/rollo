@@ -1,0 +1,5 @@
+card = buildCard
+show card
+
+text "Hello viewer"
+log "debug message"

@@ -11,6 +11,7 @@ This repository is primarily for:
 - semantic clarifications
 - parser and AST refinement
 - runtime model discussion
+- styling and override model discussion
 - worked examples
 
 ## Contribution Style
@@ -20,7 +21,7 @@ Please prefer:
 - small focused pull requests
 - explicit rationale for semantic changes
 - examples alongside rule changes
-- consistency across kernel, grammar, parser, and evaluation documents
+- consistency across kernel, grammar, parser, evaluation, and supporting documents
 
 ## When Changing Syntax
 

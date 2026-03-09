@@ -1,0 +1,3 @@
+baseCard = card
+styledCard = [padding: 2 color: "blue"] . baseCard
+warningCard = [color: "red"] . styledCard
