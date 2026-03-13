@@ -1,0 +1,3 @@
+[submodule "deps/BTCHWRK"]
+	path = deps/BTCHWRK
+	url = https://github.com/8bitprodigy/BTCHWRK

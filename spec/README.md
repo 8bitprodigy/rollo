@@ -30,4 +30,3 @@ A good reading order is:
 7. runtime
 8. events
 9. styling
-10. revisit symbol

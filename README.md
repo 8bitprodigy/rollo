@@ -1,3 +1,5 @@
+![](img/rollo.svg)
+
 # Rollo
 
 Rollo is a document oriented language for networked interactive systems.

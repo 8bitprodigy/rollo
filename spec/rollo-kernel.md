@@ -1,4 +1,5 @@
 # Rollo Kernel Specification
+
 Version 1.1 (Draft)
 
 The Rollo kernel defines the minimal parsing and evaluation rules from which all Rollo programs are built. It specifies values, containers, operators, scope, application, and command invocation. It does not define commands, control flow constructs, platform bindings, rendering systems, document structures, or standard library behavior.
@@ -280,11 +281,13 @@ Unresolved variables evaluate to `nil`.
 Kernel operators:
 
 ```text
-=      bind
-.      structural application
-@      runtime application
-?      conditional execution
-^      structural merge / insertion
+=               bind
+.               structural application
+@               runtime application
+?               conditional execution
+^               structural merge / insertion
+pop             array element removal, mutative
+without         structural removal
 + - * / % pow   arithmetic
 & | ~ ! << >>   bitwise
 == != < > <= >= comparison
@@ -325,10 +328,10 @@ and or not
 
 Rollo uses application operators to apply structured values to executable values.
 
-| Operator | Meaning |
-|----------|---------|
-| `.` | structural application |
-| `@` | runtime application |
+| Operator | Meaning                |
+| -------- | ---------------------- |
+| `.`      | structural application |
+| `@`      | runtime application    |
 
 The core action of application is binding.
 
@@ -473,13 +476,13 @@ Mixed sequence merges promote according to the container hierarchy.
 
 Operators:
 
-| Operator | Meaning |
-|----------|---------|
-| + | addition |
-| - | subtraction |
-| * | multiplication |
-| / | division |
-| % | remainder |
+| Operator | Meaning        |
+| -------- | -------------- |
+| +        | addition       |
+| -        | subtraction    |
+| *        | multiplication |
+| /        | division       |
+| %        | remainder      |
 
 ---
 
@@ -487,14 +490,14 @@ Operators:
 
 Bitwise operators apply to integers.
 
-| Operator | Meaning |
-|----------|---------|
-| `&` | AND |
-| `|` | OR |
-| `~` | XOR |
-| `!` | NOT |
-| `<<` | left shift |
-| `>>` | right shift |
+| Operator | Meaning     |
+| -------- | ----------- |
+| `&`      | AND         |
+| `\|`     | OR          |
+| `~`      | XOR         |
+| `!`      | NOT         |
+| `<<`     | left shift  |
+| `>>`     | right shift |
 
 Example:
 
@@ -519,11 +522,11 @@ Return boolean values.
 
 Logical operators operate on truthiness.
 
-| Operator | Meaning |
-|----------|---------|
-| `and` | return right if left is truthy |
-| `or` | return left if truthy |
-| `not` | logical negation |
+| Operator | Meaning                        |
+| -------- | ------------------------------ |
+| `and`    | return right if left is truthy |
+| `or`     | return left if truthy          |
+| `not`    | logical negation               |
 
 ---
 
