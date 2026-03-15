@@ -1,7 +1,7 @@
 # Rollo Runtime Architecture
-Version 1.1 (Draft)
+Version 1.2 (Draft)
 
-The Rollo runtime provides the environment in which kernel evaluation occurs. It implements commands, services, and system integration.
+The Rollo runtime provides the environment in which Spindle evaluation occurs. It implements commands, services, and system integration on top of the Spindle kernel.
 
 ## 1. Runtime Layers
 
@@ -9,59 +9,88 @@ The Rollo runtime provides the environment in which kernel evaluation occurs. It
 Rollo Runtime
  ├ Parser
  ├ Evaluator
- ├ Container System
+ ├ Collection System
  ├ Application Engine
+ ├ Access Engine
  ├ Command Registry
  └ External Services
 ```
 
 ## 2. Parser
 
-The parser reads source text and produces an internal representation suitable for evaluation.
+The parser reads source text and produces an AST suitable for evaluation, following the rules defined in the Spindle parser and AST specification.
 
 ## 3. Evaluator
 
-The evaluator applies kernel semantics, resolves variables, invokes commands, applies structured bindings, and produces values.
+The evaluator applies Spindle kernel semantics — resolves symbols, invokes commands, applies structured bindings, evaluates access expressions, and produces values.
 
-## 4. Container System
+## 4. Collection System
 
-The container system implements strings, arrays, lists, and maps according to kernel behavior, while allowing optimized internal storage.
+The collection system implements strings, arrays, lists, pairs, maps, and tables according to Spindle kernel behavior, while allowing optimized internal storage.
 
-## 5. Application Engine
+Implementations may use:
 
-The application engine handles applicator semantics.
+- native strings for strings
+- compact dynamic arrays for arrays and lists
+- a single key-value struct for pairs
+- ordered associative structures for maps
+- ordered associative structures with index support for tables
 
-It should:
+## 5. Callable Construction Engine
 
-- evaluate the left operand
-- establish an application scope
-- bind map keys into lexical names
-- shadow outer bindings of the same name inside that scope
-- invoke the right operand as a block or callable
-- optionally establish runtime context for `@`
-- optionally allow controlled outer scope modification for contextual application semantics
+The callable construction engine handles `.` and `;` construction semantics. Neither operator executes — both produce callables.
 
-## 6. Command Registry
+For isolated callable construction (`.`):
+
+- evaluate the left operand to a map
+- create a fresh isolated scope
+- bind map keys into that scope
+- return the callable with the isolated scope — do not execute
+
+For captured callable construction (`;`):
+
+- evaluate the left operand to a map
+- evaluate the right operand to a block or callable
+- merge the map into the block's external argument map
+- capture the current scope
+- return the resulting callable — do not execute
+
+## 6. Access Engine
+
+The access engine handles `@` access semantics.
+
+- evaluate the left operand to a collection
+- evaluate the right operand to a key or index value
+- look up the entry by symbol, string, integer index, or range
+- return the value or `nil` if not found
+
+## 7. Command Registry
 
 Commands may be supplied by:
 
-- standard library modules
+- Rollo standard library modules
 - bootstrapped operations
 - FFI bindings
 - external runtime services
 
-## 7. External Services
+The command registry maps symbol identifiers to their implementations. At evaluation time, a command name is looked up in the registry and invoked with its collected argument list.
 
-The runtime may expose networking, storage, timers, system calls, and other services through commands or runtime application.
+## 8. External Services
 
-## 8. Determinism Boundary
+The runtime may expose networking, storage, timers, system calls, and other services through commands or runtime application via `;`.
 
-Kernel semantics remain deterministic except where runtime services are invoked through `@` or through explicitly impure commands.
+## 9. Determinism Boundary
 
-## 9. Capability Style Design
+Spindle kernel semantics remain deterministic except where runtime services are invoked through `;` or through explicitly impure Rollo commands.
 
-A runtime may restrict command availability by capability. This is a good fit for deterministic, sandboxed, or distributed execution environments.
+Purely structural programs — those using only `^`, `.`, `@`, and collection construction — are always deterministic.
 
-## 10. Relationship to the Kernel
+## 10. Capability Style Design
 
-The kernel specifies semantics. The runtime provides implementation and integration.
+A Rollo runtime may restrict command availability by capability. This is a good fit for deterministic, sandboxed, or distributed execution environments where only a controlled subset of commands should be available.
+
+## 11. Relationship to Spindle
+
+Spindle specifies semantics. Rollo and its runtimes provide implementation, commands, and system integration.
+
+The Spindle kernel evaluation model remains consistent across all Rollo runtime environments. What varies between environments is the command set and the external services available.

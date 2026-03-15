@@ -1,51 +1,77 @@
-# Rollo Formal Grammar
-Version 1.1 (Draft)
+# Spindle Formal Grammar
+Version 1.3 (Draft)
 
-This document defines a minimal EBNF style grammar for Rollo.
+This document defines a minimal EBNF style grammar for Spindle, the kernel of Rollo.
 
 ```ebnf
-program        = { command newline } ;
+program         = { statement } ;
 
-command        = identifier { expression } ;   (* arguments form an implicit heterogeneous list *)
+statement       = command newline
+                | command continuation ;
 
-expression     = assignment
-               | conditional
-               | application
-               | binary
-               | unary
-               | primary ;
+command         = identifier { expression } @   (* arguments form an implicit heterogeneous list *)
 
-assignment     = identifier "=" expression ;
+expression      = assignment
+                | conditional
+                | application
+                | callable_construction
+                | access
+                | binary
+                | unary
+                | reference
+                | primary ;
 
-conditional    = expression "?" block ;
+assignment      = identifier "=" expression ;
 
-application    = expression "." expression
-               | expression "@" expression ;
+conditional     = expression "?" block ;
 
-binary         = expression binary_operator expression ;
+application          = expression "." expression ;
 
-unary          = unary_operator expression ;
+callable_construction = expression ";" expression ;
 
-primary        = number
-               | string
-               | boolean
-               | "nil"
-               | identifier
-               | container
-               | block
-               | "(" expression ")" ;
+access               = expression "@" expression ;
 
-container      = "[" { container_entry } "]" ;
+binary          = expression binary_operator expression ;
 
-container_entry = map_entry | expression ;
+unary           = unary_operator expression ;
 
-map_entry      = key ":" expression ;
+primary         = number
+                | fraction
+                | character
+                | string
+                | boolean
+                | symbol_literal
+                | symbol_intern
+                | "nil"
+                | identifier
+                | collection
+                | block
+                | range
+                | "(" expression ")" ;
 
-key            = identifier | string ;
+collection      = "[" { collection_entry } "]" ;
 
-block          = "{" { command newline } "}" ;
+collection_entry = map_entry | expression ;
 
-binary_operator = "^"
+map_entry       = key { ":" key } ":" expression ;
+
+pair_entry      = key ":" expression ;
+
+key             = identifier | string | symbol_literal ;
+
+block           = "{" { statement } "}" ;
+
+range           = expression ".." expression
+                | expression "..." expression ;
+
+symbol_literal  = "`" identifier ;
+
+symbol_intern   = "$" ( identifier | string ) ;
+
+reference       = "reference" expression ;
+
+binary_operator = ":"
+                | "^"
                 | "+"
                 | "-"
                 | "*"
@@ -64,29 +90,60 @@ binary_operator = "^"
                 | "<="
                 | ">="
                 | "and"
-                | "or" ;
+                | "or"
+                | "pop"
+                | "without" ;
 
-unary_operator = "!"
-               | "not" ;
+unary_operator  = "!"
+                | "not" ;
 
-identifier     = letter { letter | digit | "_" } ;
+identifier      = letter { letter | digit | "_" } ;
 
-number         = digit { digit } [ "." digit { digit } ] ;
+number          = integer | decimal ;
 
-string         = '"' { character } '"' ;
+integer         = digit { digit } ;
 
-boolean        = "true" | "false" ;
+decimal         = digit { digit } "." digit { digit } ;
 
-newline        = "\n" ;
+fraction        = integer "/" integer ;
+
+character       = "'" unicode_char "'" ;
+
+string          = '"' { string_char } '"' ;
+
+boolean         = "true" | "false" ;
+
+newline         = "\n" ;
+
+continuation    = "\" "\n" ;
+
+unicode_char    = (* any Unicode code point *) ;
+
+string_char     = (* any Unicode code point except unescaped '"' *) ;
+
+letter          = (* Unicode letter *) ;
+
+digit           = "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
 ```
 
 ## Notes
 
 - This grammar is intentionally minimal.
-- Application operators are modeled separately because they have applicator semantics rather than ordinary binary operator semantics.
-- `()` denotes an immediately evaluated expression, not a list literal.
-- `[]` denotes all container literals.
-- Bracket containers resolve by content: all keyed entries form ordered maps, unkeyed homogeneous entries form arrays, unkeyed heterogeneous entries form lists.
-- Mixed keyed and unkeyed entries are allowed and remain index addressable; keyed entries additionally expose keys.
-- Newline continuation rules from the kernel specification still apply.
-- Commands are not enumerated here because the kernel does not define a fixed command set.
+- `.` constructs a callable with a fresh isolated scope. Pure — no access to outer scope.
+- `;` constructs a callable with the current scope captured. Can read and mutate outer scope.
+- Neither `.` nor `;` executes. Invocation happens only when a callable appears in command position.
+- `@` is collection access — evaluates the right operand and uses it as a key or index.
+- `reference` is a unary prefix operator that returns a named callable as a value without invoking it. Block literals never require `reference`.
+- `()` denotes an immediately evaluated expression, not a collection literal.
+- `[]` denotes all collection literals. Collection kind is resolved by content at parse time.
+- A homogeneous array of character literals resolves to a string.
+- All keyed entries produce a map. All unkeyed homogeneous entries produce an array. All unkeyed heterogeneous entries produce a list. Mixed keyed and unkeyed entries produce a table.
+- `map_entry` allows multiple keys to share a value via chained `:` operators. A `pair_entry` carries exactly one key and one value.
+- `:` is a binary operator producing a pair. Inside `[]` it appears as part of `map_entry` or `pair_entry` syntax.
+- Range expressions `..` and `...` produce arrays of values. `..` is exclusive of the end, `...` is inclusive.
+- `symbol_literal` with `` ` `` suppresses variable lookup and produces the symbol itself.
+- `symbol_intern` with `$` interns a string or identifier as a symbol. `$` followed immediately by a digit is reserved for Rollo monetary literals and is not defined by Spindle.
+- `pop` and `without` are word operators and participate in binary expression parsing.
+- `fraction` is written as two integers separated by `/`. The parser resolves ambiguity with division by context.
+- A newline terminates a statement unless a continuation rule applies. See the kernel specification for the full list of continuation rules. An explicit `\` at the end of a line always continues to the next line.
+- Commands are not enumerated here because Spindle does not define a fixed command set. Commands are provided by Rollo libraries and runtime environments.

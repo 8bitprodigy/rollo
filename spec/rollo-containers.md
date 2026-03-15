@@ -6,6 +6,7 @@ Rollo defines four container types:
 - string
 - array
 - list
+- pair
 - map
 
 These are semantic types. Implementations may represent them using different underlying data structures.

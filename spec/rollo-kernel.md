@@ -1,38 +1,37 @@
-# Rollo Kernel Specification
+# Spindle Kernel Specification
+Version 1.3 (Draft)
 
-Version 1.1 (Draft)
+Spindle defines the minimal parsing and evaluation rules from which Rollo is built. It specifies values, collections, operators, scope, application, and command invocation. It does not define commands, control flow constructs, platform bindings, rendering systems, document structures, or standard library behavior.
 
-The Rollo kernel defines the minimal parsing and evaluation rules from which all Rollo programs are built. It specifies values, containers, operators, scope, application, and command invocation. It does not define commands, control flow constructs, platform bindings, rendering systems, document structures, or standard library behavior.
-
-Rollo is a value oriented language. The kernel is intentionally small and defines only what every Rollo implementation must share.
+Spindle is a value oriented kernel. It is intentionally small and defines only what every Rollo implementation must share.
 
 ---
 
 # I. Design Principles
 
-**Everything is a value.**  
-Numbers, strings, containers, code blocks, and callables are values.
+**Everything is a value.**
+Numbers, strings, collections, code blocks, and characters are values.
 
-**Programs are executable structure.**  
-A Rollo program is a sequence of commands and expressions evaluated according to kernel rules.
+**Programs are executable structure.**
+A Spindle program is a sequence of commands and expressions evaluated according to kernel rules.
 
-**Delimiters have fixed meaning.**  
-`[]` denotes all container literals, `()` denotes an expression evaluated immediately, and `{}` denotes a code block with deferred execution.
+**Delimiters have fixed meaning.**
+`[]` denotes all collection literals, `()` denotes an expression evaluated immediately, and `{}` denotes a code block with deferred execution.
 
-**Commands are extensible.**  
-The kernel defines no commands. Commands are provided by libraries, runtime services, or foreign interfaces.
+**Commands are extensible.**
+The kernel defines no commands. Commands are provided by Rollo libraries, runtime services, or foreign interfaces.
 
-**Application is structural.**  
+**Application is structural.**
 Structured values may be applied to executable values by binding fields into lexical names.
 
-**The kernel is minimal.**  
-Rendering, UI structure, networking, storage, and event systems belong outside the kernel.
+**The kernel is minimal.**
+Rendering, UI structure, networking, storage, and event systems belong outside Spindle and are defined by Rollo and its runtimes.
 
 ---
 
 # II. Program Structure
 
-A Rollo program is a sequence of commands separated by newlines.
+A Spindle program is a sequence of commands separated by newlines.
 
 Example:
 
@@ -43,10 +42,11 @@ show "world"
 
 A newline terminates a command unless:
 
-1. a delimiter remains open  
-2. the following line begins with an operator  
-3. a closing delimiter is followed by additional tokens  
+1. a delimiter remains open
+2. the following line begins with an operator
+3. a closing delimiter is followed by additional tokens
 4. the command is still collecting its argument sequence
+5. the line ends with `\`
 
 Commas are ignored everywhere except inside string literals.
 
@@ -112,25 +112,34 @@ This rule keeps command invocation consistent with the ordinary expression gramm
 
 # III. Values
 
-Core value types:
+Scalar types:
 
-- number
-- string
-- boolean
 - nil
+- boolean
+- number (integer, decimal, fraction)
+- character
+- symbol
+
+Collection types:
+
+- string
 - array
 - list
+- pair
 - map
-- code block
-- callable
+- table
+
+Executable types:
+
+- block
 
 Values may be stored, passed, and returned.
 
 ---
 
-# IV. Containers
+# IV. Collections
 
-Rollo provides four container types.
+All collection literals use `[]`. The kind of collection is resolved by content.
 
 ## String
 
@@ -140,7 +149,13 @@ Immutable ordered sequence of characters.
 "hello"
 ```
 
-Strings behave as sequence containers but remain a distinct type because they are extremely common and performance sensitive.
+Strings behave as sequence collections but remain a distinct type because they are extremely common and performance sensitive.
+
+A string may also be constructed from a homogeneous array of character literals:
+
+```text
+['h' 'e' 'l' 'l' 'o']   -> "hello"
+```
 
 ## Array
 
@@ -162,88 +177,108 @@ Ordered heterogeneous sequence.
 
 Lists allow mixed data and flexible structural composition.
 
+## Pair
+
+A single key-value entry, produced by the `:` operator.
+
+```text
+name:"Ada"
+```
+
+A pair is its own collection type — not a sequence and not a map. It carries exactly one key and one value. Pairs are the building blocks of maps.
+
 ## Map
 
-Key value container.
+An ordered associative container of key-value pairs.
 
 ```text
 [name:"Ada" age:32]
 ```
 
-Multiple keys may inherit a value.
+Maps are ordered as well as key addressable. They are the primary carrier for named application bindings.
+
+Multiple keys may share a value using chained `:` operators.
 
 ```text
 ["a":"b":"c":42]
 ```
 
-## Bracket Container Resolution
+## Table
 
-Bracket containers resolve to array, list, or map by content.
+An ordered container supporting both keyed and unkeyed entries. Produced when a sequence and a map are structurally merged.
 
-- if all entries are keyed, the container is an ordered map
-- if no entries are keyed and the entries are homogeneous, the container is an array
-- if no entries are keyed and the entries are heterogeneous, the container is a list
-- if keyed and unkeyed entries are mixed, the container remains ordered and is always addressable by index; keyed entries additionally expose their keys
+```text
+[a:1 2 b:3]
+```
+
+All entries in a table are addressable by index. Keyed entries are additionally addressable by key.
+
+## Bracket Collection Resolution
+
+Bracket collections resolve by content:
+
+- if no entries are keyed and all entries are characters, the collection is a string
+- if all entries are keyed, the collection is an ordered map
+- if no entries are keyed and the entries are homogeneous, the collection is an array
+- if no entries are keyed and the entries are heterogeneous, the collection is a list
+- if keyed and unkeyed entries are mixed, the collection is a table
 
 Examples:
 
 ```text
-[1 2 3]              -> array
-[1 "a" true]         -> list
-[name:"Ada" age:32]  -> map
-["a":"b":"c":42]     -> map
-[a:1 2]              -> mixed ordered container
+['h' 'e' 'l' 'l' 'o']   -> "hello"
+[1 2 3]                  -> array
+[1 "a" true]             -> list
+[name:"Ada" age:32]      -> map
+["a":"b":"c":42]         -> map
+[a:1 2]                  -> table
 ```
 
-## Container Design Note
+## Collection Design Note
 
-Container types are distinguished by semantics, not by required storage layout. An implementation may represent them using native strings, dynamic arrays, tables, or other optimized structures. The kernel defines container behavior, not internal representation.
-
-This separation allows implementations to optimize:
-
-- strings using native string representations
-- arrays using compact homogeneous dynamic arrays
-- lists using heterogeneous arrays or tables
-- maps using ordered associative data structures
-
-Maps are ordered as well as key addressable. The distinction is also necessary for predictable container promotion when merging unlike container types.
+Collection types are distinguished by semantics, not by required storage layout. An implementation may represent them using native strings, dynamic arrays, or ordered associative data structures. The kernel defines collection behavior, not internal representation.
 
 ---
 
-# V. Container Promotion
+# V. Collection Promotion
 
-When structurally combining unlike container types, promotion follows a deterministic hierarchy.
+When structurally combining unlike collection types, promotion follows a deterministic hierarchy.
 
 ```text
-string < array < list < map
+string < array < list < pair < map < table
 ```
 
-The resulting container type is the higher type in the hierarchy.
+The resulting collection type is the higher type in the hierarchy.
 
 Examples:
 
 ```text
 "abc" ^ "def"        -> string
-"abc" ^ ["d"]        -> array
+"abc" ^ ["d"]        -> list
 [1 2] ^ [3 "x"]      -> list
-[1 "x"] ^ [a:1]      -> map
+[1 "x"] ^ [a:1]      -> table
+[a:1] ^ [b:2]        -> map
+name:"Ada" ^ age:32  -> map
+[a:1] ^ [1 2]        -> table
 ```
 
 ---
 
-# VI. Code Blocks
+# VI. Blocks
 
-Code blocks defer evaluation.
+Blocks defer evaluation.
 
 ```text
 {
-  show "hello"
+    show "hello"
 }
 ```
 
-They introduce a lexical scope and execute only when evaluated or applied.
+A block introduces a lexical scope and executes only when applied or invoked.
 
-Code blocks are executable values, not containers.
+Blocks are executable values, not collections.
+
+A block with a bound external argument map is referred to as a callable, but the underlying type remains block.
 
 ---
 
@@ -257,7 +292,7 @@ Parentheses denote immediate evaluation of an expression.
 
 The enclosed expression is parsed and evaluated immediately according to ordinary precedence and evaluation rules.
 
-Parentheses do not denote container literals.
+Parentheses do not denote collection literals.
 
 ---
 
@@ -270,7 +305,17 @@ x = 10
 title = "Example"
 ```
 
-Scope is lexical. `{}` creates a new scope.
+By default, a block shares its parent scope. Reads and writes inside the block propagate to the enclosing scope.
+
+```text
+x = 10
+
+{
+    x = 20
+}
+
+show x      -> 20
+```
 
 Unresolved variables evaluate to `nil`.
 
@@ -278,21 +323,26 @@ Unresolved variables evaluate to `nil`.
 
 # IX. Operators
 
-Kernel operators:
-
-```text
-=               bind
-.               structural application
-@               runtime application
-?               conditional execution
-^               structural merge / insertion
-pop             array element removal, mutative
-without         structural removal
-+ - * / % pow   arithmetic
-& | ~ ! << >>   bitwise
-== != < > <= >= comparison
-and or not      logical
-```
+| Operator | Meaning |
+| -------- | ------- |
+| `=` | bind |
+| `:` | pair construction |
+| `.` | callable construction, isolated scope |
+| `;` | callable construction, captured scope |
+| `@` | collection access |
+| `?` | conditional execution |
+| `^` | structural merge |
+| `` ` `` | symbol literal |
+| `$` | intern string as symbol |
+| `reference` | return callable value without invoking |
+| `..` | exclusive range |
+| `...` | inclusive range |
+| `pop` | mutating element removal |
+| `without` | non-mutating structural removal |
+| `+ - * / % pow` | arithmetic |
+| `& \| ~ ! << >>` | bitwise |
+| `== != < > <= >=` | comparison |
+| `and or not` | logical |
 
 `pow` is treated as an infix arithmetic operator.
 
@@ -308,8 +358,12 @@ Highest to lowest:
 
 ```text
 () [] {}
-. @
+` $ reference
+. ; @
+:
+.. ...
 ^
+pop  without
 * / %
 + -
 << >>
@@ -324,94 +378,120 @@ and or not
 
 ---
 
-# XI. Application
+# XI. Application and Access
 
-Rollo uses application operators to apply structured values to executable values.
+# XI. Callable Construction and Access
 
-| Operator | Meaning                |
-| -------- | ---------------------- |
-| `.`      | structural application |
-| `@`      | runtime application    |
+Both `.` and `;` construct callables. Neither executes. The distinction is scope:
 
-The core action of application is binding.
+| Operator | Meaning |
+| -------- | ------- |
+| `.` | callable construction, isolated scope |
+| `;` | callable construction, captured scope |
 
-When a map is applied to a code block or callable, its keys are bound as lexical names within the application scope.
+## Isolated Callable Construction
 
-Example:
+`.` constructs a callable with a fresh isolated scope populated only by the applied map. The callable has no access to the outer scope and cannot mutate it. This is the pure form.
 
 ```text
 person = [name:"Ada" age:32]
 
-person . {
+greet = person . {
     show name
 }
 ```
 
-Within the applied block, `name` resolves to `"Ada"` and `age` resolves to `32`.
+The callable `greet` has `name` and `age` bound from `person` and no access to anything else.
 
-This allows maps to act as named argument carriers.
+When invoked, it executes in that isolated scope:
 
-## Binding Collisions During Application
+```text
+greet
+```
 
-Application creates a fresh application scope.
+If an outer variable needs to be available inside, it must be passed explicitly through the map:
 
-Bindings introduced from the applied map populate that scope before the executable value is evaluated.
+```text
+x = 10
 
-If an applied key has the same name as an outer binding, the applied binding shadows the outer binding within the application scope.
+increment = [x: x] . {
+    show x
+}
+```
 
-Example:
+### Binding Collisions
+
+If a map key has the same name as an outer binding, the map binding takes precedence within the isolated scope.
 
 ```text
 name = "outer"
 
-[name:"inner"] . {
-    show name
+greet = [name:"inner"] . {
+    show name   -> "inner"
 }
 ```
 
-Within the application, `name` resolves to `"inner"`.
+### Pure Function Pattern
 
-Bindings created inside the block still follow ordinary lexical scope rules. A binding created inside the block may shadow an applied binding in an inner nested scope.
+`.` is the primary way to define pure functions in Spindle — callables that depend only on their explicit inputs and produce no side effects on the outer scope.
 
-Example:
+## Captured Callable Construction
 
-```text
-[name:"inner"] . {
-    show name
-    {
-        name = "nested"
-        show name
-    }
-    show name
-}
-```
-
-This evaluates conceptually as:
+`;` constructs a callable with the current scope captured. When invoked, the callable can read and mutate the captured scope.
 
 ```text
-"inner"
-"nested"
-"inner"
+myCommand = [x y] ; { x + y }
 ```
 
-The kernel does not require application to mutate outer scopes. Application only establishes bindings for the duration of the applied evaluation.
-
-### Structural application
-
-`.` applies bindings without implying external runtime interaction by itself. It is intended for local structural evaluation and does not require mutation of outer scopes.
-
-### Runtime application
-
-`@` applies bindings in a runtime facing context. It is intended for cases where the applied executable may interact with services or other runtime systems. A higher level runtime may also allow `@` to participate in controlled outer scope modification or other contextual effects.
-
-Examples:
+Re-applying in the current scope to capture it:
 
 ```text
-[name:"Ada"] . greet
-[url:"https://example.com"] @ fetch
+newCommand = [] ; myCommand
 ```
 
-The exact behavior of application with non-map left operands is runtime defined, but map application is the kernel model.
+This produces a new callable identical to `myCommand` but with the current scope captured instead of the original.
+
+Overriding specific arguments:
+
+```text
+newCommand = [x: 10] ; myCommand
+```
+
+## Reference
+
+`reference` returns a named callable as a value without invoking it.
+
+```text
+reference myCommand    -> the callable value itself
+```
+
+Without `reference`, a named identifier in command position is always invoked. `reference` suppresses invocation so the callable can be passed as a value, stored, or re-applied.
+
+```text
+myVal = reference myCommand    -> assigns the callable, does not invoke
+callbacks = [reference increment reference decrement]
+```
+
+Block literals never require `reference` since they are always values and never auto-invoke.
+
+## Access
+
+`@` accesses a collection entry using the evaluated value of its right operand.
+
+```text
+collection @ expression
+```
+
+The right operand is evaluated normally. The resulting value is used as the key or index:
+
+```text
+person @ `name       -> value keyed by symbol name
+person @ "name"      -> value keyed by string "name"
+person @ name        -> value keyed by whatever value name holds
+list   @ 0           -> value at index 0
+list   @ 1..3        -> values at indices 1 and 2
+list   @ 1...3       -> values at indices 1, 2, and 3
+```
 
 ---
 
@@ -423,11 +503,11 @@ condition ? { block }
 
 If the condition is truthy the block executes and returns its value.
 
-Otherwise the falsy condition is returned.
+Otherwise the value the condition evaluated to is returned.
 
 ---
 
-# XIII. Structural Merge and Insertion
+# XIII. Structural Merge
 
 `^` structurally combines values.
 
@@ -435,46 +515,170 @@ Otherwise the falsy condition is returned.
 left ^ right
 ```
 
-Maps merge keys:
+### Characters
+
+Characters merge into strings.
 
 ```text
-[a:1 b:2] ^ [b:3]
-→ [a:1 b:3]
+'a' ^ 'b'        -> "ab"
+'a' ^ "bc"       -> "abc"
 ```
 
-Arrays concatenate:
+### Strings
 
-```text
-[1 2] ^ [3 4]
-→ [1 2 3 4]
-```
-
-Strings concatenate:
+Strings concatenate.
 
 ```text
 "hello " ^ "world"
-→ "hello world"
+-> "hello world"
 ```
 
-Lists concatenate according to list semantics.
+When merged with a non-string collection, a string explodes into its constituent characters.
+
+```text
+"ab" ^ [1 2]
+-> ['a' 'b' 1 2]
+```
+
+### Arrays
+
+Arrays concatenate when homogeneous. Mixed content promotes to list.
+
+```text
+[1 2] ^ [3 4]    -> [1 2 3 4]
+[1 2] ^ [3 "x"]  -> [1 2 3 "x"]
+```
+
+### Lists
+
+Lists concatenate.
 
 ```text
 [1 "a"] ^ [2 "b"]
-→ [1 "a" 2 "b"]
+-> [1 "a" 2 "b"]
 ```
 
-Mixed sequence merges promote according to the container hierarchy.
+### Pairs
+
+Two pairs produce a map. If the keys are identical, the right value overwrites the left.
 
 ```text
-[1 2] ^ [3 "x"]
-→ [1 2 3 "x"]
+name:"Ada" ^ age:32          -> [name:"Ada" age:32]
+name:"Ada" ^ name:"Lovelace" -> name:"Lovelace"
+```
+
+A pair merged with a sequence produces a table.
+
+```text
+name:"Ada" ^ [1 2]           -> table
+```
+
+### Maps
+
+Maps merge keys. A right-side key overwrites a matching left-side key.
+
+```text
+[a:1 b:2] ^ [b:3 c:4]
+-> [a:1 b:3 c:4]
+```
+
+A map merged with any sequence produces a table.
+
+```text
+[a:1 b:2] ^ [1 2]
+-> table
+```
+
+### Tables
+
+Any merge involving a table produces a table.
+
+### Scalars
+
+Scalars are promoted into a collection when merged. The resulting type depends on the scalar types involved — two characters produce a string, two numbers produce an array, mixed scalars produce a list.
+
+```text
+1 ^ 2      -> [1 2]
+'a' ^ 'b'  -> "ab"
+1 ^ "x"    -> [1 "x"]
 ```
 
 ---
 
-# XIV. Arithmetic
+# XIV. Ranges
 
-Operators:
+The range operators produce an array of values from two numeric or character operands.
+
+| Operator | Meaning       |
+| -------- | ------------- |
+| `..`     | exclusive end |
+| `...`    | inclusive end |
+
+```text
+1..5          -> [1 2 3 4]
+1...5         -> [1 2 3 4 5]
+'a'...'e'     -> ['a' 'b' 'c' 'd' 'e']
+```
+
+Ranges may be used as operands to `pop` and `without`, and may participate in iteration.
+
+---
+
+# XV. Collection Removal
+
+## pop
+
+`pop` mutatively removes one or more elements from an array or list and returns the removed value or values.
+
+```text
+array pop 0          -> removes and returns first element
+array pop [0 2]      -> removes and returns elements at indices 0 and 2
+array pop 1..3       -> removes and returns elements at indices 1 and 2
+array pop 1...3      -> removes and returns elements at indices 1, 2, and 3
+```
+
+`pop` is not valid on maps or tables.
+
+## without
+
+`without` non-mutatively produces a new collection with the specified entries removed.
+
+```text
+array without 0           -> new array without element at index 0
+map without `name         -> new map without the entry keyed by symbol name
+map without $nameVar      -> new map without the entry keyed by the symbol in nameVar
+map without [`name `age]  -> new map without entries keyed by name and age
+array without 1..3        -> new array without elements at indices 1 and 2
+```
+
+`without` works on all collection types.
+
+---
+
+# XVI. Symbol Operations
+
+## Symbol Literal
+
+The `` ` `` prefix operator suppresses variable lookup and produces the symbol itself.
+
+```text
+`name    -> the symbol name, not the variable name
+```
+
+## Symbol Interning
+
+The `$` prefix operator interns a string or identifier as a symbol and binds it to the current scope. If the string does not meet identifier rules, an error is produced.
+
+```text
+$name            -> interns the string held in variable name as a symbol
+$"mySymbol"      -> interns the string literal as a symbol
+```
+
+`$` followed immediately by a digit with no whitespace is reserved for monetary literals in Rollo and is not defined at the Spindle kernel level.
+
+---
+
+# XVII. Arithmetic
 
 | Operator | Meaning        |
 | -------- | -------------- |
@@ -483,10 +687,11 @@ Operators:
 | *        | multiplication |
 | /        | division       |
 | %        | remainder      |
+| pow      | exponentiation |
 
 ---
 
-# XV. Bitwise Operations
+# XVIII. Bitwise Operations
 
 Bitwise operators apply to integers.
 
@@ -499,16 +704,9 @@ Bitwise operators apply to integers.
 | `<<`     | left shift  |
 | `>>`     | right shift |
 
-Example:
-
-```text
-flags & mask
-value << 1
-```
-
 ---
 
-# XVI. Comparison
+# XIX. Comparison
 
 ```text
 == != < > <= >=
@@ -518,19 +716,17 @@ Return boolean values.
 
 ---
 
-# XVII. Logical Operations
+# XX. Logical Operations
 
-Logical operators operate on truthiness.
-
-| Operator | Meaning                        |
-| -------- | ------------------------------ |
-| `and`    | return right if left is truthy |
-| `or`     | return left if truthy          |
-| `not`    | logical negation               |
+| Operator | Meaning |
+| -------- | ------- |
+| `and`    | return right if left is truthy, otherwise return left |
+| `or`     | return left if truthy, otherwise return evaluation of right |
+| `not`    | logical negation |
 
 ---
 
-# XVIII. Truthiness
+# XXI. Truthiness
 
 Falsy values:
 
@@ -538,16 +734,16 @@ Falsy values:
 0
 false
 nil
-uninitialized variables
+uninitialized values
 ```
 
 All others are truthy.
 
 ---
 
-# XIX. Commands
+# XXII. Commands
 
-A command is any identifier not defined as an operator.
+A command is any identifier not defined as an operator or keyword.
 
 ```text
 show "hello"
@@ -556,31 +752,31 @@ fetch url
 
 Commands may come from:
 
-- standard libraries
+- Rollo standard libraries
 - bootstrapped operations
 - FFI bindings
 - runtime services
 
-Command arguments are heterogeneous and are most naturally modeled as an implicit list. A command line therefore behaves like a command name followed by an implicit list of argument expressions.
+Command arguments are treated as an implicit heterogeneous list.
 
 ---
 
-# XX. Kernel Boundary
+# XXIII. Kernel Boundary
 
-The kernel defines:
+Spindle defines:
 
 - syntax
 - values
-- containers
+- collections
 - promotion
 - operators
 - binding
-- application
+- application and access
 - scope
 - evaluation
 - command argument collection
 
-The kernel does not define:
+Spindle does not define:
 
 - rendering
 - document structure
@@ -590,11 +786,11 @@ The kernel does not define:
 - event systems
 - standard library commands
 
-These belong to higher level specifications or runtime environments.
+These belong to Rollo and its runtime environments.
 
 ---
 
-# XXI. Execution Model
+# XXIV. Execution Model
 
 Execution stages:
 
@@ -604,11 +800,9 @@ Execution stages:
 4. evaluate commands
 5. produce resulting values
 
-The kernel therefore functions as a minimal execution and transformation model rather than a complete application environment.
-
 ---
 
-# XXII. Minimal Example
+# XXV. Minimal Example
 
 ```text
 person = [name:"Ada" age:32]
@@ -616,6 +810,8 @@ person = [name:"Ada" age:32]
 person . {
     show name
 }
+
+show person @ `name
 ```
 
-This example demonstrates binding, application, lexical scope, and command evaluation without depending on higher level structures outside the kernel.
+This example demonstrates binding, structural application, isolated scope, collection access, and command evaluation without depending on higher level structures outside the Spindle kernel.
